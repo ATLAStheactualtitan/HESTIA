@@ -18,6 +18,7 @@ class TaskRunner:
         self.bot = bot
         self.tasks: dict[str, ScheduledTask] = {}
         self.running = False
+        self.workers: dict[str, asyncio.Task] = {}
 
     def add(self, name: str, callback: Callable[[], Awaitable[None]], interval_seconds: float = 60.0):
         if not callable(callback):
@@ -36,10 +37,36 @@ class TaskRunner:
 
         self.running = True
         for task in self.tasks.values():
-            asyncio.create_task(self._run_task(task))
+            if task.enabled:
+                self._start_worker(task)
 
     async def stop(self):
         self.running = False
+        workers = list(self.workers.values())
+        self.workers.clear()
+        for worker in workers:
+            worker.cancel()
+        if workers:
+            await asyncio.gather(*workers, return_exceptions=True)
+
+    async def set_enabled(self, name: str, enabled: bool):
+        task = self.tasks.get(name)
+        if task is None:
+            raise KeyError(f"Task '{name}' is not registered.")
+
+        task.enabled = enabled
+        worker = self.workers.pop(name, None)
+        if worker is not None:
+            worker.cancel()
+            await asyncio.gather(worker, return_exceptions=True)
+        if enabled and self.running:
+            self._start_worker(task)
+        return task.enabled
+
+    def _start_worker(self, task: ScheduledTask):
+        worker = self.workers.get(task.name)
+        if worker is None or worker.done():
+            self.workers[task.name] = asyncio.create_task(self._run_task(task))
 
     async def run_now(self, name: str):
         task = self.tasks.get(name)

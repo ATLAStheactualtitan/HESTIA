@@ -12,6 +12,10 @@ __pycache__/
 venv/
 ENV/
 
+# Stockpile data
+src/modules/stockpiles/stockpile_config.json
+src/modules/stockpiles/stockpile_logs/
+
 # Editor / OS
 .vscode/
 .DS_Store

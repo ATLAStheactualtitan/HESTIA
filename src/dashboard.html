@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101114">
+  <title>HESTIA — System Dashboard</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101114;
+      --panel: rgba(28, 30, 36, .86);
+      --panel-strong: #1c1e24;
+      --line: rgba(255, 255, 255, .075);
+      --muted: #92949e;
+      --text: #f5f3ef;
+      --accent: #f0a66a;
+      --green: #6ed6a0;
+      --yellow: #f3c76e;
+      --red: #f27b7b;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 12% 0%, rgba(226, 130, 73, .13), transparent 36rem),
+        radial-gradient(ellipse at 100% 20%, rgba(111, 92, 161, .10), transparent 34rem),
+        var(--bg);
+    }
+    .shell { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 34px 0 42px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 48px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 750; letter-spacing: .18em; }
+    .brand-mark { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid rgba(240,166,106,.35); border-radius: 12px; color: var(--accent); background: rgba(240,166,106,.09); font-size: 18px; }
+    .live-pill { display: flex; align-items: center; gap: 9px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.025); color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 12px currentColor; }
+    .dot.online { background: var(--green); color: var(--green); }
+    .dot.error { background: var(--red); color: var(--red); }
+    .eyebrow { margin: 0 0 12px; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); font-weight: 600; letter-spacing: -.055em; }
+    .subtitle { margin: 12px 0 0; color: var(--muted); font-size: 14px; }
+    .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+    .identity { display: flex; align-items: center; gap: 12px; margin-top: 21px; color: #c9c7c2; font-size: 14px; }
+    .identity .dot { width: 9px; height: 9px; }
+    .updated { color: var(--muted); font-size: 12px; text-align: right; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
+    .card { border: 1px solid var(--line); border-radius: 17px; background: var(--panel); box-shadow: 0 18px 50px rgba(0,0,0,.12); backdrop-filter: blur(12px); }
+    .metric { min-height: 125px; padding: 20px; }
+    .metric-label { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; }
+    .metric-icon { color: var(--accent); font-size: 16px; }
+    .metric-value { margin-top: 20px; font-size: 27px; font-weight: 620; letter-spacing: -.04em; }
+    .metric-note { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .panels { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; }
+    .panel { min-height: 260px; padding: 22px; }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 17px; border-bottom: 1px solid var(--line); }
+    .panel-title { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+    .panel-count { color: var(--muted); font-size: 11px; }
+    .rows { display: grid; gap: 8px; padding-top: 13px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 0 12px; border: 1px solid transparent; border-radius: 10px; background: rgba(255,255,255,.025); }
+    .row-name { overflow: hidden; color: #e5e3df; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+    .row-status { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; text-transform: capitalize; white-space: nowrap; }
+    .row-status .dot { width: 6px; height: 6px; }
+    .row-status.active .dot { background: var(--green); color: var(--green); }
+    .row-status.error .dot { background: var(--red); color: var(--red); }
+    .row-status.paused .dot, .row-status.stopped .dot { background: #777984; color: #777984; }
+    .row-status.disabled .dot { background: #777984; color: #777984; }
+    .row-action { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: rgba(255,255,255,.04); font: inherit; font-size: 11px; cursor: pointer; }
+    .row-action:hover { border-color: rgba(240,166,106,.45); background: rgba(240,166,106,.09); }
+    .row-action:disabled, .control-button:disabled { opacity: .55; cursor: wait; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    .control-button { padding: 10px 15px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: rgba(255,255,255,.05); font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+    .control-button.primary { border-color: rgba(110,214,160,.28); color: var(--green); background: rgba(110,214,160,.08); }
+    .control-button.warning { border-color: rgba(243,199,110,.28); color: var(--yellow); background: rgba(243,199,110,.08); }
+    .control-button.danger { border-color: rgba(242,123,123,.28); color: var(--red); background: rgba(242,123,123,.08); }
+    .control-note { align-self: center; color: var(--muted); font-size: 11px; }
+    .control-message { min-height: 18px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+    .empty { padding: 30px 12px; color: var(--muted); font-size: 13px; text-align: center; }
+    .footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 22px; color: #686a73; font-size: 11px; }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 30px, 560px); padding-top: 22px; }
+      .topbar { margin-bottom: 34px; }
+      .hero { align-items: flex-start; flex-direction: column; }
+      .updated { text-align: left; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .panels { grid-template-columns: 1fr; }
+      .row { align-items: flex-start; }
+    }
+    @media (max-width: 390px) { .metric { padding: 15px; } .metric-value { font-size: 23px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark">✦</div><span>HESTIA</span></div>
+      <div class="live-pill"><span id="liveDot" class="dot"></span><span id="liveLabel">Connecting</span></div>
+    </div>
+
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Operations overview</p>
+        <h1>System dashboard</h1>
+        <p class="subtitle">A live view of your bot and its active components.</p>
+        <div class="identity"><span id="botDot" class="dot"></span><span id="botName">HESTIA</span><span>·</span><span id="botState">Starting up</span></div>
+      </div>
+      <div class="updated">Last refreshed<br><strong id="lastUpdated">—</strong></div>
+    </section>
+
+    <section class="card panel" style="min-height:0; margin-bottom:16px">
+      <div class="panel-heading"><h2 class="panel-title">Bot controls</h2><span class="panel-count">Local control only</span></div>
+      <div class="controls">
+        <button id="startButton" class="control-button primary" type="button">Start bot</button>
+        <button id="pauseButton" class="control-button warning" type="button">Pause functions</button>
+        <button id="resumeButton" class="control-button primary" type="button">Resume functions</button>
+        <button id="shutdownButton" class="control-button danger" type="button">Stop bot</button>
+        <span class="control-note">The control panel stays open so you can start it again.</span>
+      </div>
+      <div id="controlMessage" class="control-message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="metrics" aria-label="Bot metrics">
+      <article class="card metric"><div class="metric-label">Uptime <span class="metric-icon">◷</span></div><div class="metric-value" id="uptime">—</div><div class="metric-note">Current session</div></article>
+      <article class="card metric"><div class="metric-label">Gateway latency <span class="metric-icon">⌁</span></div><div class="metric-value" id="latency">—</div><div class="metric-note">Discord connection</div></article>
+      <article class="card metric"><div class="metric-label">Servers <span class="metric-icon">◇</span></div><div class="metric-value" id="servers">—</div><div class="metric-note">Connected guilds</div></article>
+      <article class="card metric"><div class="metric-label">Modules <span class="metric-icon">▦</span></div><div class="metric-value" id="moduleCount">—</div><div class="metric-note" id="moduleNote">Active components</div></article>
+    </section>
+
+    <section class="panels">
+      <article class="card panel">
+        <div class="panel-heading"><h2 class="panel-title">Modules</h2><span class="panel-count" id="moduleSummary">—</span></div>
+        <div class="rows" id="modules"><div class="empty">Waiting for module status…</div></div>
+      </article>
+      <article class="card panel">
+        <div class="panel-heading"><h2 class="panel-title">API services</h2><span class="panel-count" id="serviceSummary">—</span></div>
+        <div class="rows" id="services"><div class="empty">Waiting for service status…</div></div>
+      </article>
+      <article class="card panel">
+        <div class="panel-heading"><h2 class="panel-title">Background tasks</h2><span class="panel-count" id="taskSummary">—</span></div>
+        <div class="rows" id="tasks"><div class="empty">Waiting for task status…</div></div>
+      </article>
+    </section>
+
+    <footer class="footer"><span>HESTIA · LOCAL CONTROL PANEL</span><span>Only accessible from this computer</span></footer>
+  </main>
+
+  <script>
+    const controlToken = '__HESTIA_CONTROL_TOKEN__';
+    const byId = (id) => document.getElementById(id);
+    const formatUptime = (total) => {
+      const days = Math.floor(total / 86400);
+      const hours = Math.floor((total % 86400) / 3600);
+      const minutes = Math.floor((total % 3600) / 60);
+      const seconds = total % 60;
+      return days ? `${days}d ${hours}h` : hours ? `${hours}h ${minutes}m` : `${minutes}m ${seconds}s`;
+    };
+    async function sendControl(action, name, enabled) {
+      const message = byId('controlMessage');
+      message.textContent = 'Applying control…';
+      try {
+        const response = await fetch('/api/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Hestia-Control-Token': controlToken },
+          body: JSON.stringify({ action, name, enabled }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Control action failed.');
+        message.textContent = result.status === 'stopping' ? 'Bot is stopping…' : result.status === 'starting' ? 'Bot is starting…' : result.status === 'already stopped' ? 'Bot is already stopped.' : 'Control updated.';
+        await refresh();
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    }
+    function renderRows(container, items, emptyText, action, controlsEnabled = true) {
+      container.replaceChildren();
+      if (!items.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = emptyText;
+        container.append(empty);
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const name = document.createElement('span');
+        name.className = 'row-name';
+        name.textContent = item.name;
+        const status = document.createElement('span');
+        status.className = `row-status ${item.status}`;
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        const label = document.createElement('span');
+        label.textContent = item.status;
+        status.append(dot, label);
+        row.append(name);
+        if (action) {
+          const button = document.createElement('button');
+          button.className = 'row-action';
+          button.type = 'button';
+          button.textContent = item.status === 'active' ? 'Disable' : 'Enable';
+          button.disabled = !controlsEnabled || item.status === 'error';
+          button.setAttribute('aria-label', `${button.textContent} ${item.name}`);
+          button.addEventListener('click', () => sendControl(action, item.name, item.status !== 'active'));
+          row.append(status, button);
+        } else {
+          row.append(status);
+        }
+        container.append(row);
+      }
+    }
+    async function refresh() {
+      try {
+        const response = await fetch('/api/status', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Dashboard status request failed');
+        const data = await response.json();
+        const bot = data.bot;
+        const ready = bot.ready;
+        const processRunning = bot.process_running ?? ready;
+        const running = ready && !bot.paused && !bot.stopping;
+        byId('liveLabel').textContent = bot.error ? 'Error' : bot.stopping ? 'Stopping' : bot.paused ? 'Paused' : ready ? 'Live' : processRunning ? 'Connecting' : 'Stopped';
+        byId('liveDot').className = `dot${running ? ' online' : bot.stopping || bot.error ? ' error' : ''}`;
+        byId('botDot').className = `dot${running ? ' online' : bot.stopping || bot.error ? ' error' : ''}`;
+        byId('botName').textContent = bot.name;
+        byId('botState').textContent = bot.error || (bot.stopping ? 'Stopping' : bot.paused ? 'Functions paused' : ready ? 'Online' : processRunning ? 'Connecting to Discord' : 'Stopped');
+        byId('startButton').disabled = processRunning || bot.stopping;
+        byId('pauseButton').disabled = !ready || bot.paused || bot.stopping;
+        byId('resumeButton').disabled = !ready || !bot.paused || bot.stopping;
+        byId('shutdownButton').disabled = !processRunning || bot.stopping;
+        byId('uptime').textContent = formatUptime(bot.uptime_seconds);
+        byId('latency').textContent = bot.latency_ms == null ? '—' : `${bot.latency_ms} ms`;
+        byId('servers').textContent = bot.server_count;
+
+        const activeModules = data.modules.filter((module) => module.status === 'active').length;
+        const errors = data.modules.filter((module) => module.status === 'error').length;
+        byId('moduleCount').textContent = `${activeModules}/${data.modules.length}`;
+        byId('moduleNote').textContent = errors ? `${errors} module error${errors === 1 ? '' : 's'}` : 'Active components';
+        byId('moduleSummary').textContent = `${activeModules} active${errors ? ` · ${errors} errors` : ''}`;
+        renderRows(byId('modules'), data.modules, 'No modules discovered', 'module', processRunning && ready);
+        const activeServices = data.services.filter((service) => service.status === 'active').length;
+        byId('serviceSummary').textContent = `${activeServices}/${data.services.length} active`;
+        renderRows(byId('services'), data.services, 'No controllable API services', 'service', processRunning && ready);
+        byId('taskSummary').textContent = data.scheduler_running ? 'Scheduler running' : 'Scheduler stopped';
+        renderRows(byId('tasks'), data.tasks, 'No scheduled tasks registered', 'task', processRunning && ready);
+        byId('lastUpdated').textContent = new Date().toLocaleTimeString();
+      } catch (_error) {
+        byId('liveLabel').textContent = 'Offline';
+        byId('liveDot').className = 'dot error';
+        byId('botState').textContent = 'Dashboard feed unavailable';
+      }
+    }
+    byId('startButton').addEventListener('click', () => sendControl('start'));
+    byId('pauseButton').addEventListener('click', () => sendControl('pause'));
+    byId('resumeButton').addEventListener('click', () => sendControl('resume'));
+    byId('shutdownButton').addEventListener('click', () => {
+      if (confirm('Stop the bot worker? The control panel will stay open, and you can start the bot again here.')) {
+        sendControl('shutdown');
+      }
+    });
+    refresh();
+    setInterval(refresh, 2500);
+  </script>
+</body>
+</html>
